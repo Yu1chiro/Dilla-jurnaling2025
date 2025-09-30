@@ -34,29 +34,72 @@ const authMiddleware = (req, res, next) => {
 };
 
 // Fungsi untuk inisialisasi database
+// Fungsi untuk inisialisasi database (SUDAH DIPERBAIKI)
 const initializeDatabase = async () => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
+    // Setiap perintah CREATE TABLE dijalankan satu per satu
     await client.query(`
-            CREATE TABLE IF NOT EXISTS classes ( id SERIAL PRIMARY KEY, class_name VARCHAR(50) UNIQUE NOT NULL, homeroom_teacher VARCHAR(100) );
-            CREATE TABLE IF NOT EXISTS students ( id SERIAL PRIMARY KEY, nipd VARCHAR(20) UNIQUE NOT NULL, full_name VARCHAR(100) NOT NULL, gender CHAR(1), class_id INT REFERENCES classes(id) ON DELETE CASCADE, grade INT DEFAULT 0 );
-            CREATE TABLE IF NOT EXISTS student_status ( id SERIAL PRIMARY KEY, student_id INT REFERENCES students(id) ON DELETE CASCADE, status_date DATE NOT NULL, status VARCHAR(10) DEFAULT 'Hadir', UNIQUE (student_id, status_date) );
-            CREATE TABLE IF NOT EXISTS student_notes ( id SERIAL PRIMARY KEY, student_id INT REFERENCES students(id) ON DELETE CASCADE, note_date TIMESTAMPTZ DEFAULT NOW(), note_text TEXT NOT NULL );
-            CREATE TABLE IF NOT EXISTS class_journals ( id SERIAL PRIMARY KEY, class_id INT REFERENCES classes(id) ON DELETE CASCADE NOT NULL, journal_date DATE NOT NULL DEFAULT CURRENT_DATE, learning_achievement TEXT, material_element TEXT, agenda TEXT, method TEXT, is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW() );
-        `);
+        CREATE TABLE IF NOT EXISTS classes ( 
+            id SERIAL PRIMARY KEY, 
+            class_name VARCHAR(50) UNIQUE NOT NULL, 
+            homeroom_teacher VARCHAR(100) 
+        );
+    `);
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS students ( 
+            id SERIAL PRIMARY KEY, 
+            nipd VARCHAR(20) UNIQUE NOT NULL, 
+            full_name VARCHAR(100) NOT NULL, 
+            gender CHAR(1), 
+            class_id INT REFERENCES classes(id) ON DELETE CASCADE, 
+            grade INT DEFAULT 0 
+        );
+    `);
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS student_status ( 
+            id SERIAL PRIMARY KEY, 
+            student_id INT REFERENCES students(id) ON DELETE CASCADE, 
+            status_date DATE NOT NULL, 
+            status VARCHAR(10) DEFAULT 'Hadir', 
+            UNIQUE (student_id, status_date) 
+        );
+    `);
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS student_notes ( 
+            id SERIAL PRIMARY KEY, 
+            student_id INT REFERENCES students(id) ON DELETE CASCADE, 
+            note_date TIMESTAMPTZ DEFAULT NOW(), 
+            note_text TEXT NOT NULL 
+        );
+    `);
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS class_journals ( 
+            id SERIAL PRIMARY KEY, 
+            class_id INT REFERENCES classes(id) ON DELETE CASCADE NOT NULL, 
+            journal_date DATE NOT NULL DEFAULT CURRENT_DATE, 
+            learning_achievement TEXT, 
+            material_element TEXT, 
+            agenda TEXT, 
+            method TEXT, 
+            is_active BOOLEAN DEFAULT true, 
+            created_at TIMESTAMPTZ DEFAULT NOW(), 
+            updated_at TIMESTAMPTZ DEFAULT NOW() 
+        );
+    `);
 
     await client.query("COMMIT");
-    console.log("Database schema is ready. No default data was seeded.");
+    console.log("✅ Database schema is ready. All tables created successfully.");
   } catch (e) {
     await client.query("ROLLBACK");
-    console.error("Database initialization failed:", e);
+    console.error("❌ Database initialization failed:", e);
   } finally {
     client.release();
   }
 };
-
+// fix error schema db
 // --- Rute Halaman ---
 app.get("/", (req, res) => res.redirect("/login.html"));
 app.get("/dashboard", authMiddleware, (req, res) => res.sendFile(path.join(__dirname, "public", "dashboard.html")));
